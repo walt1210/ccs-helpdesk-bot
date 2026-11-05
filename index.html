@@ -225,13 +225,52 @@
       cursor: not-allowed; /* Show a "no" pointer */
     } /* End of disabled styles */
 
-    #usage { /* The small token counter under the input */
-      text-align: center; /* Center the text */
-      font-size: 0.75rem; /* Tiny text */
+    /* ---------- NEW: Token & Cost Meter (running total at the top) ---------- */
+    #meterTop { /* The white bar under the header that shows the running totals */
+      max-width: 800px; /* Same width as the chat */
+      width: calc(100% - 40px); /* Full width minus a 20px gap on each side */
+      margin: 12px auto 0; /* Space above; centered */
+      padding: 8px 14px; /* Space inside */
+      background: #ffffff; /* White card */
+      border: 2px solid var(--gold); /* Gold border */
+      border-radius: 12px; /* Rounded corners */
+      display: flex; /* Items in a row... */
+      flex-wrap: wrap; /* ...that wrap on phones */
+      align-items: center; /* Vertically centered */
+      gap: 4px 18px; /* Space between items */
+      font-size: 0.85rem; /* Slightly small text */
+      flex-shrink: 0; /* Don't let the chat squash it */
+    } /* End of top meter styles */
+
+    #meterTop .title { font-weight: bold; color: var(--red); } /* "Token & Cost Meter" in red */
+    #meterTop b { color: var(--red-dark); } /* The numbers in dark red */
+
+    .price-note { /* The "Example paid prices..." label (used at the top and under each reply) */
+      font-size: 0.72rem; /* Tiny text */
       color: var(--muted); /* Grey */
-      padding: 0 0 8px; /* A little space at the bottom */
-      background: #ffffff; /* Same white as the form bar */
-    } /* End of usage styles */
+      font-style: italic; /* Slanted, so it reads as a side note */
+    } /* End of price note styles */
+
+    #meterTop .price-note { flex-basis: 100%; } /* At the top, the label gets its own line */
+
+    /* ---------- NEW: the small meter card under each bot reply ---------- */
+    .meter { /* The card that appears right under a bot bubble */
+      align-self: flex-start; /* Left side, like the bot bubble above it */
+      max-width: 75%; /* Same width limit as a bubble */
+      margin-top: -4px; /* Tuck it close to the reply it belongs to */
+      padding: 8px 12px; /* Space inside */
+      background: #ffffff; /* White card */
+      border: 1px dashed var(--gold); /* Dashed gold border: "this is extra info" */
+      border-radius: 10px; /* Rounded corners */
+      font-size: 0.78rem; /* Small text */
+    } /* End of meter card styles */
+
+    .meter table { border-collapse: collapse; } /* Thin, tidy table */
+    .meter th, .meter td { padding: 2px 10px 2px 0; text-align: left; } /* Space between columns */
+    .meter th { color: var(--red-dark); font-weight: bold; } /* Column titles in dark red */
+    .meter td.n { text-align: right; font-family: Consolas, "Courier New", monospace; } /* Numbers lined up on the right */
+    .meter .cost { margin-top: 4px; } /* Small gap above the cost line */
+    .meter .why { color: var(--muted); margin-top: 2px; } /* Grey hint about why the numbers differ */
 
     /* ---------- NEW: Memory ON/OFF switch bar ---------- */
     #memoryBar { /* The thin bar that holds the Memory switch, just above the text box */
@@ -348,6 +387,14 @@
     <p>Angeles University Foundation · College of Computer Studies</p> <!-- School name in gold -->
   </header> <!-- End of the title bar -->
 
+  <!-- NEW: Token & Cost Meter — running totals of the REAL token counts, at the top of the page -->
+  <div id="meterTop"> <!-- White bar under the header -->
+    <span class="title">🔢 Token &amp; Cost Meter</span> <!-- Meter name -->
+    <span>Real tokens so far: <b id="totIn">0</b> in · <b id="totOut">0</b> out · <b id="totAll">0</b> total</span> <!-- Running token totals -->
+    <span>Pretend cost: <b id="totUsd">US$0.000000</b> (<b id="totPhp">₱0.0000</b>)</span> <!-- Running pretend cost -->
+    <span class="price-note">Example paid prices. Our free tier costs us nothing. (US$0.25 per million input tokens · US$1.50 per million output tokens · ₱58 per US$1)</span> <!-- The required label -->
+  </div> <!-- End of the top meter -->
+
   <!-- NEW: Bot Instructions panel. <details> folds open and closed when its title is clicked -->
   <details id="panel"> <!-- Starts closed so the chat has room; click the title to open -->
     <summary>⚙ Bot Instructions</summary> <!-- The clickable title bar -->
@@ -390,7 +437,6 @@
     <button id="send" type="submit">Send</button> <!-- The Send button -->
   </form> <!-- End of the bottom bar -->
 
-  <div id="usage">Tokens used: 0 in · 0 out</div> <!-- Small counter of tokens used so far -->
 
   <script> // Everything inside <script> is JavaScript that makes the page WORK
 
@@ -417,7 +463,11 @@
     const form = document.getElementById("form"); // The bottom form
     const input = document.getElementById("input"); // The text box
     const sendBtn = document.getElementById("send"); // The Send button
-    const usageBox = document.getElementById("usage"); // The token counter
+    const totInBox = document.getElementById("totIn"); // NEW: running total of real input tokens (top meter)
+    const totOutBox = document.getElementById("totOut"); // NEW: running total of real output tokens (top meter)
+    const totAllBox = document.getElementById("totAll"); // NEW: running total of all real tokens (top meter)
+    const totUsdBox = document.getElementById("totUsd"); // NEW: running pretend cost in US dollars
+    const totPhpBox = document.getElementById("totPhp"); // NEW: running pretend cost in pesos
     const saveBtn = document.getElementById("saveBtn"); // NEW: Save instructions button
     const resetBtn = document.getElementById("resetBtn"); // NEW: Reset to default button
     const saveStatus = document.getElementById("saveStatus"); // NEW: the small status message
@@ -483,6 +533,57 @@
     const messages = []; // A list of { role, content } objects; starts empty
     let totalIn = 0; // Running total of input tokens
     let totalOut = 0; // Running total of output tokens
+
+    // ---------- 6a) NEW: Token & Cost Meter ----------
+    // EXAMPLE paid prices (pretend only — our free tier costs us nothing)
+    const PRICE_IN_PER_MILLION = 0.25; // US$ for every 1,000,000 input tokens
+    const PRICE_OUT_PER_MILLION = 1.50; // US$ for every 1,000,000 output tokens
+    const PESOS_PER_USD = 58; // Exchange rate: ₱58 for US$1
+    const PRICE_NOTE = "Example paid prices. Our free tier costs us nothing."; // Label shown with every cost
+
+    function estimateTokens(text) { // Our rough rule of thumb: about 4 characters per token
+      return Math.round(text.length / 4); // Characters ÷ 4, rounded to a whole number
+    } // End of estimateTokens
+
+    function costUsd(inTokens, outTokens) { // Pretend cost in US dollars
+      return inTokens / 1000000 * PRICE_IN_PER_MILLION + // input tokens × input price...
+             outTokens / 1000000 * PRICE_OUT_PER_MILLION; // ...plus output tokens × output price
+    } // End of costUsd
+
+    function money(usd) { // Turn a US$ amount into "US$0.000123 (₱0.0071)"
+      return "US$" + usd.toFixed(6) + " (₱" + (usd * PESOS_PER_USD).toFixed(4) + ")"; // Many decimals: the amounts are tiny
+    } // End of money
+
+    function updateTopMeter() { // Refresh the running totals at the top of the page
+      const usd = costUsd(totalIn, totalOut); // Pretend cost of everything so far
+      totInBox.textContent = totalIn.toLocaleString(); // e.g. "1,234"
+      totOutBox.textContent = totalOut.toLocaleString(); // Output tokens so far
+      totAllBox.textContent = (totalIn + totalOut).toLocaleString(); // Input + output
+      totUsdBox.textContent = "US$" + usd.toFixed(6); // Dollars
+      totPhpBox.textContent = "₱" + (usd * PESOS_PER_USD).toFixed(4); // Pesos
+    } // End of updateTopMeter
+
+    // Add the small meter card under a bot reply.
+    // sentText = all the text we sent (job card + every message content), reply = the bot's answer, usage = { input, output } from /api/chat
+    function addMeter(sentText, reply, usage) {
+      const estIn = estimateTokens(sentText); // MY estimate for what we sent
+      const estOut = estimateTokens(reply); // MY estimate for the reply
+      const realIn = (usage && usage.input) || 0; // REAL input tokens reported by Gemini
+      const realOut = (usage && usage.output) || 0; // REAL output tokens (includes hidden "thinking")
+      const div = document.createElement("div"); // A new card
+      div.className = "meter"; // Use the meter card styles
+      div.innerHTML = // Numbers only (no student text), so innerHTML is safe here
+        "<table>" +
+          "<tr><th></th><th>My estimate<br>(characters ÷ 4)</th><th>Real<br>(from usage)</th></tr>" + // Column titles
+          "<tr><td>Sent (input)</td><td class='n'>" + estIn + " <span class='price-note'>(" + sentText.length + " chars)</span></td><td class='n'>" + realIn + "</td></tr>" + // Input row
+          "<tr><td>Reply (output)</td><td class='n'>" + estOut + " <span class='price-note'>(" + reply.length + " chars)</span></td><td class='n'>" + realOut + "</td></tr>" + // Output row
+        "</table>" +
+        "<div class='cost'>Pretend cost of this reply: <b>" + money(costUsd(realIn, realOut)) + "</b></div>" + // Cost from the REAL counts
+        "<div class='price-note'>" + PRICE_NOTE + "</div>" + // Required label
+        "<div class='why'>Real output can be much bigger than the estimate: it also counts the bot's hidden \"thinking\" tokens.</div>"; // Explains the gap
+      chat.appendChild(div); // Put it right under the reply
+      chat.scrollTop = chat.scrollHeight; // Keep the newest item in view
+    } // End of addMeter
     let requestCount = 0; // NEW: how many requests we have sent (shown in the "What the app sends" panel)
 
     // ---------- 6b) NEW: the Memory ON/OFF switch ----------
@@ -558,10 +659,13 @@
 
       // NEW: build the request body ONCE, so the panel shows exactly what we send
       const toSend = messagesToSend(); // Whole conversation (Memory ON) or just the newest message (Memory OFF)
+      const systemText = buildSystemPrompt(); // The six saved boxes combined into one job card
       const bodyText = JSON.stringify({ // Turn our object into JSON text
-        system: buildSystemPrompt(), // The six saved boxes combined into one job card
+        system: systemText, // The job card
         messages: toSend // CHANGED: chosen by the Memory switch
       }); // End of the JSON body
+      // NEW: all the TEXT the AI will read = job card + every message we send (used for "my estimate")
+      const sentText = systemText + toSend.map(function (m) { return m.content; }).join(""); // Glue it all into one string
       showSentJson(bodyText, toSend.length); // NEW: show it in the "What the app sends" panel
 
       try { // "try" = attempt the risky part (the network call); errors jump to "catch"
@@ -585,10 +689,12 @@
         addBubble(reply, "bot"); // Show the answer on the left
         messages.push({ role: "assistant", content: reply }); // Save the answer in memory
 
+        addMeter(sentText, reply, data.usage); // NEW: estimate vs real tokens + pretend cost, under the reply
+
         if (data.usage) { // If the server sent token counts...
           totalIn += data.usage.input || 0; // ...add the input tokens to the total
           totalOut += data.usage.output || 0; // ...add the output tokens to the total
-          usageBox.textContent = "Tokens used: " + totalIn + " in · " + totalOut + " out"; // Update the counter
+          updateTopMeter(); // CHANGED: refresh the running totals at the top of the page
         } // End of usage update
 
       } catch (err) { // This runs if the request could not be sent at all (no internet, server down...)
