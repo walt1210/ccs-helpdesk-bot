@@ -233,6 +233,111 @@
       background: #ffffff; /* Same white as the form bar */
     } /* End of usage styles */
 
+    /* ---------- NEW: Memory ON/OFF switch bar ---------- */
+    #memoryBar { /* The thin bar that holds the Memory switch, just above the text box */
+      display: flex; /* Put the switch and its note side by side */
+      align-items: center; /* Line them up vertically */
+      gap: 12px; /* Space between the switch and the note */
+      padding: 10px 20px 0; /* Space above and on the sides */
+      background: #ffffff; /* Same white as the form bar below it */
+      border-top: 3px solid var(--gold); /* Gold line on top (the form's line moves here) */
+      flex-wrap: wrap; /* On phones, let the note drop to the next line */
+    } /* End of memory bar styles */
+
+    .switch { /* The clickable label that wraps the hidden checkbox + the drawn switch */
+      display: inline-flex; /* Track and word sit in one row */
+      align-items: center; /* Vertically centered */
+      gap: 8px; /* Space between the track and the word "Memory" */
+      font-weight: bold; /* Bold label */
+      color: var(--red-dark); /* Dark red text */
+      cursor: pointer; /* Hand pointer: it can be clicked */
+      user-select: none; /* Don't highlight the text when clicked quickly */
+    } /* End of switch styles */
+
+    .switch input { /* The real checkbox: hidden, but still works with the keyboard */
+      position: absolute; /* Take it out of the layout... */
+      opacity: 0; /* ...and make it invisible */
+      width: 1px; height: 1px; /* Tiny, but still focusable */
+    } /* End of hidden checkbox styles */
+
+    .track { /* The rounded "pill" of the switch */
+      width: 44px; /* Width of the pill */
+      height: 24px; /* Height of the pill */
+      border-radius: 99px; /* Fully rounded ends */
+      background: #cccccc; /* Grey = OFF */
+      position: relative; /* So the knob can be placed inside it */
+      transition: background 0.2s; /* Smooth color change */
+    } /* End of track styles */
+
+    .track::after { /* The round white knob inside the pill */
+      content: ""; /* Needed for ::after to appear */
+      position: absolute; /* Placed inside the track */
+      top: 3px; left: 3px; /* Starts on the LEFT (OFF position) */
+      width: 18px; height: 18px; /* Size of the knob */
+      border-radius: 50%; /* Perfect circle */
+      background: #ffffff; /* White knob */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3); /* Small shadow so it looks raised */
+      transition: left 0.2s; /* Smooth slide */
+    } /* End of knob styles */
+
+    .switch input:checked + .track { background: var(--gold); } /* Gold pill = ON */
+    .switch input:checked + .track::after { left: 23px; } /* Knob slides to the RIGHT when ON */
+    .switch input:focus-visible + .track { outline: 3px solid var(--red); outline-offset: 2px; } /* Keyboard focus ring */
+
+    #memoryState { /* The ON / OFF word next to the switch */
+      min-width: 2.5em; /* Same width for "ON" and "OFF" so nothing jumps */
+    } /* End of state word styles */
+
+    #memoryNote { /* Small grey sentence explaining what the switch does right now */
+      font-size: 0.8rem; /* Small text */
+      color: var(--muted); /* Grey */
+    } /* End of note styles */
+
+    form { border-top: none; } /* The gold line now sits on the memory bar above the form */
+
+    /* ---------- NEW: "What the app sends" panel ---------- */
+    #sendsPanel { /* Fold-open box that shows the JSON sent to /api/chat */
+      max-width: 800px; /* Same width as the chat */
+      width: calc(100% - 40px); /* Full width minus a 20px gap on each side */
+      margin: 0 auto 10px; /* Centered, small gap below */
+      background: #ffffff; /* White card */
+      border: 2px solid var(--gold); /* Gold border */
+      border-radius: 12px; /* Rounded corners */
+      flex-shrink: 0; /* Don't let the chat squash its title bar */
+    } /* End of sends panel styles */
+
+    #sendsPanel summary { /* The clickable title bar */
+      padding: 10px 14px; /* Space inside the title bar */
+      font-weight: bold; /* Bold text */
+      color: var(--red); /* Red text */
+      cursor: pointer; /* Hand pointer */
+    } /* End of summary styles */
+
+    #sendsInfo { /* One line above the JSON: request number, memory mode, message count */
+      padding: 0 14px 6px; /* Space on the sides and below */
+      font-size: 0.8rem; /* Small text */
+      color: var(--muted); /* Grey */
+    } /* End of info line styles */
+
+    #sendsInfo b { color: var(--red-dark); } /* Make "ON"/"OFF" and the count stand out */
+
+    #sendsJson { /* The dark box that shows the exact JSON */
+      margin: 0 14px 14px; /* Space around it inside the card */
+      padding: 12px 14px; /* Space inside the box */
+      background: #1f1c19; /* Dark "code" background */
+      color: #f1ece4; /* Light text */
+      border-radius: 8px; /* Rounded corners */
+      font-family: Consolas, "Courier New", monospace; /* Code font */
+      font-size: 0.8rem; /* Small so long requests still fit */
+      white-space: pre-wrap; /* Keep the JSON's line breaks, wrap long lines */
+      word-break: break-word; /* Break very long words */
+      max-height: 30vh; /* Never taller than about a third of the screen... */
+      overflow-y: auto; /* ...scroll inside it when the conversation is long */
+    } /* End of JSON box styles */
+
+    #sendsJson .k-role { color: #f2b84b; font-weight: bold; } /* "role" values in gold */
+    #sendsJson .k-content { color: #a6d98a; } /* "content" values in green */
+
   </style> <!-- End of the styles -->
 </head> <!-- End of the head -->
 
@@ -263,6 +368,23 @@
 
   <main id="chat"></main> <!-- Empty area; JavaScript will add the message bubbles here -->
 
+  <!-- NEW: "What the app sends" panel. Shows the exact JSON body sent to /api/chat after every message -->
+  <details id="sendsPanel" open> <!-- Starts OPEN so students see it right away; click the title to fold it -->
+    <summary>📦 What the app sends to /api/chat</summary> <!-- The clickable title bar -->
+    <div id="sendsInfo">Nothing sent yet. Type a question and press Send.</div> <!-- Request number, memory mode, message count -->
+    <pre id="sendsJson">{ }</pre> <!-- The exact JSON appears here -->
+  </details> <!-- End of the sends panel -->
+
+  <!-- NEW: Memory ON/OFF switch -->
+  <div id="memoryBar"> <!-- Thin bar just above the text box -->
+    <label class="switch" for="memoryToggle"> <!-- Clicking anywhere on the label flips the switch -->
+      <input id="memoryToggle" type="checkbox" role="switch" checked> <!-- The real checkbox (hidden); checked = Memory ON -->
+      <span class="track"></span> <!-- The drawn pill-and-knob switch -->
+      Memory <span id="memoryState">ON</span> <!-- The word "Memory" plus ON/OFF -->
+    </label> <!-- End of the switch -->
+    <span id="memoryNote">The bot gets the whole conversation with every message.</span> <!-- What the switch does right now -->
+  </div> <!-- End of the memory bar -->
+
   <form id="form"> <!-- The bottom bar; "form" lets the Enter key send too -->
     <input id="input" type="text" maxlength="300" placeholder="Ask about classes, labs, requirements..." autocomplete="off"> <!-- Text box, max 300 characters -->
     <button id="send" type="submit">Send</button> <!-- The Send button -->
@@ -286,7 +408,9 @@
     const STORAGE_KEY = "ccsBotInstructions"; // The name we save under in this browser's storage
 
     const MAX_CHARS = 300; // The longest message a student may send (same as the server's limit)
-    const MAX_HISTORY = 20; // How many recent messages we send to the server (keeps requests small)
+    const MAX_HISTORY = 29; // CHANGED (was 20): most messages sent when Memory is ON.
+                            // The server accepts at most 30. We use an ODD number so the
+                            // trimmed list always starts with a student ("user") message.
 
     // ---------- 2) Grab the parts of the page we will use ----------
     const chat = document.getElementById("chat"); // The chat area
@@ -297,6 +421,11 @@
     const saveBtn = document.getElementById("saveBtn"); // NEW: Save instructions button
     const resetBtn = document.getElementById("resetBtn"); // NEW: Reset to default button
     const saveStatus = document.getElementById("saveStatus"); // NEW: the small status message
+    const memoryToggle = document.getElementById("memoryToggle"); // NEW: the Memory ON/OFF checkbox
+    const memoryState = document.getElementById("memoryState"); // NEW: the "ON"/"OFF" word
+    const memoryNote = document.getElementById("memoryNote"); // NEW: the grey explanation next to the switch
+    const sendsInfo = document.getElementById("sendsInfo"); // NEW: the info line in the "What the app sends" panel
+    const sendsJson = document.getElementById("sendsJson"); // NEW: the box that shows the exact JSON
 
     function box(name) { // Helper: find the textarea for one field name
       return document.getElementById("f-" + name); // e.g. "role" → the element with id "f-role"
@@ -354,6 +483,46 @@
     const messages = []; // A list of { role, content } objects; starts empty
     let totalIn = 0; // Running total of input tokens
     let totalOut = 0; // Running total of output tokens
+    let requestCount = 0; // NEW: how many requests we have sent (shown in the "What the app sends" panel)
+
+    // ---------- 6b) NEW: the Memory ON/OFF switch ----------
+    // The page ALWAYS keeps the full chat in "messages" (so the bubbles stay on screen).
+    // The switch only decides how much of it we SEND to the server.
+    function updateMemoryLabel() { // Show the current switch position in words
+      if (memoryToggle.checked) { // Switch is ON
+        memoryState.textContent = "ON"; // Show "ON"
+        memoryNote.textContent = "The bot gets the whole conversation with every message."; // Explain ON
+      } else { // Switch is OFF
+        memoryState.textContent = "OFF"; // Show "OFF"
+        memoryNote.textContent = "The bot gets ONLY your newest message. It forgets everything before it."; // Explain OFF
+      } // End of if/else
+    } // End of updateMemoryLabel
+    memoryToggle.addEventListener("change", updateMemoryLabel); // Update the words every time the switch is flipped
+    updateMemoryLabel(); // Show the right words when the page opens
+
+    function messagesToSend() { // Decide which messages go to the server for THIS request
+      if (memoryToggle.checked) { // Memory ON...
+        return messages.slice(-MAX_HISTORY); // ...send the conversation so far (up to the newest 29 messages)
+      } // End of ON branch
+      return messages.slice(-1); // Memory OFF: send only the newest message (the student's question)
+    } // End of messagesToSend
+
+    // ---------- 6c) NEW: show the exact JSON in the "What the app sends" panel ----------
+    function escapeHtml(s) { // Make text safe to put inside HTML (so < and & show as plain text)
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); // Swap the 3 risky characters
+    } // End of escapeHtml
+
+    function showSentJson(jsonText, count) { // jsonText = the exact text we send, count = how many messages
+      requestCount += 1; // One more request sent
+      sendsInfo.innerHTML = "Request #" + requestCount + // e.g. "Request #3"
+        " · Memory <b>" + (memoryToggle.checked ? "ON" : "OFF") + "</b>" + // Which mode was used
+        " · <b>" + count + "</b> message" + (count === 1 ? "" : "s") + " sent"; // How many messages went to the server
+      const pretty = JSON.stringify(JSON.parse(jsonText), null, 2); // Same JSON, just indented with 2 spaces so it's easy to read
+      sendsJson.innerHTML = escapeHtml(pretty) // Make it safe for HTML first...
+        .replace(/("role": )(".*?")/g, '$1<span class="k-role">$2</span>') // ...then color each "role" value gold
+        .replace(/("content": )("(?:\\.|[^"\\])*")/g, '$1<span class="k-content">$2</span>'); // ...and each "content" value green (skips \" inside the text)
+      sendsJson.scrollTop = sendsJson.scrollHeight; // Scroll to the bottom so the newest message is visible
+    } // End of showSentJson
 
     // ---------- 7) Helper: add a bubble to the chat ----------
     function addBubble(text, kind) { // "text" = what to show, "kind" = "user", "bot", "thinking" or "error"
@@ -387,14 +556,19 @@
 
       const thinking = addBubble("Thinking...", "thinking"); // Show the temporary "Thinking..." bubble
 
+      // NEW: build the request body ONCE, so the panel shows exactly what we send
+      const toSend = messagesToSend(); // Whole conversation (Memory ON) or just the newest message (Memory OFF)
+      const bodyText = JSON.stringify({ // Turn our object into JSON text
+        system: buildSystemPrompt(), // The six saved boxes combined into one job card
+        messages: toSend // CHANGED: chosen by the Memory switch
+      }); // End of the JSON body
+      showSentJson(bodyText, toSend.length); // NEW: show it in the "What the app sends" panel
+
       try { // "try" = attempt the risky part (the network call); errors jump to "catch"
         const response = await fetch("/api/chat", { // Send a request to OUR server function (never to Google directly)
           method: "POST", // POST = we are sending data
           headers: { "Content-Type": "application/json" }, // Tell the server we are sending JSON
-          body: JSON.stringify({ // Turn our object into JSON text
-            system: buildSystemPrompt(), // CHANGED: the six saved boxes combined into one job card
-            messages: messages.slice(-MAX_HISTORY) // Only the most recent messages
-          }) // End of the JSON body
+          body: bodyText // CHANGED: the very same JSON text the panel is showing
         }); // End of fetch
 
         const data = await response.json().catch(function () { return {}; }); // Read the server's JSON (empty object if it's not JSON)
