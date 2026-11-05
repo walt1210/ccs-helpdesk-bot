@@ -334,6 +334,32 @@
 
     form { border-top: none; } /* The gold line now sits on the memory bar above the form */
 
+    /* ---------- NEW: Creativity dial ---------- */
+    #dialRow { /* The slider row, under the Memory switch */
+      flex-basis: 100%; /* Take a full line of its own inside the control bar */
+      display: flex; /* Items side by side */
+      flex-wrap: wrap; /* Wrap on phones */
+      align-items: center; /* Vertically centered */
+      gap: 4px 10px; /* Space between items */
+    } /* End of dial row styles */
+
+    .dial-label { font-weight: bold; color: var(--red-dark); } /* "Creativity" in bold dark red */
+    .dial-end { font-size: 0.75rem; color: var(--muted); } /* "Precise 0" and "1 Creative" in small grey */
+
+    #creativity { /* The slider itself */
+      width: 160px; /* A comfortable length to drag */
+      accent-color: var(--gold); /* Gold handle and track fill (modern browsers) */
+      cursor: pointer; /* Hand pointer */
+    } /* End of slider styles */
+
+    #dialValue { /* The current setting, e.g. "0.7 · Creative" */
+      font-weight: bold; /* Bold */
+      color: var(--red); /* Red */
+      min-width: 8.5em; /* Fixed width so the note beside it doesn't jump around */
+    } /* End of value styles */
+
+    #dialNote { font-size: 0.8rem; color: var(--muted); } /* Grey sentence: what gets added to the job card */
+
     /* ---------- NEW: "What the app sends" panel ---------- */
     #sendsPanel { /* Fold-open box that shows the JSON sent to /api/chat */
       max-width: 800px; /* Same width as the chat */
@@ -430,6 +456,16 @@
       Memory <span id="memoryState">ON</span> <!-- The word "Memory" plus ON/OFF -->
     </label> <!-- End of the switch -->
     <span id="memoryNote">The bot gets the whole conversation with every message.</span> <!-- What the switch does right now -->
+
+    <!-- NEW: Creativity dial (a slider from 0 = Precise to 1 = Creative) -->
+    <div id="dialRow"> <!-- Its own line inside the control bar -->
+      <label for="creativity" class="dial-label">🎛 Creativity</label> <!-- Name of the dial -->
+      <span class="dial-end">Precise 0</span> <!-- Left end label -->
+      <input id="creativity" type="range" min="0" max="1" step="0.1" value="0" aria-describedby="dialNote"> <!-- The slider; starts at Precise -->
+      <span class="dial-end">1 Creative</span> <!-- Right end label -->
+      <span id="dialValue">0.0 · Precise</span> <!-- Current setting, shown next to the slider -->
+      <span id="dialNote">Adds to the job card: "Give the most standard, predictable answer."</span> <!-- What it adds right now -->
+    </div> <!-- End of the dial row -->
   </div> <!-- End of the memory bar -->
 
   <form id="form"> <!-- The bottom bar; "form" lets the Enter key send too -->
@@ -497,11 +533,48 @@
 
     // ---------- 4) Combine the six boxes into ONE system prompt ----------
     function buildSystemPrompt() { // Returns the full job card as one piece of text
-      return FIELD_NAMES // Start from the list of field names
+      const lines = FIELD_NAMES // Start from the list of field names
         .filter(function (name) { return instructions[name].trim() !== ""; }) // Skip boxes left empty
-        .map(function (name) { return name.toUpperCase() + ": " + instructions[name].trim(); }) // e.g. "ROLE: You are..."
-        .join("\n"); // Put each section on its own line
+        .map(function (name) { return name.toUpperCase() + ": " + instructions[name].trim(); }); // e.g. "ROLE: You are..."
+      const extra = creativityInstruction(); // NEW: the sentence chosen by the Creativity dial ("" in the middle)
+      if (extra !== "") lines.push("CREATIVITY: " + extra); // NEW: add it as the last line of the job card
+      return lines.join("\n"); // Put each section on its own line
     } // End of buildSystemPrompt
+
+    // ---------- 4b) NEW: the Creativity dial ----------
+    const PRECISE_TEXT = "Give the most standard, predictable answer."; // Added at the Precise end
+    const CREATIVE_TEXT = "Be imaginative and give a different, surprising answer each time."; // Added at the Creative end
+    const dial = document.getElementById("creativity"); // The slider (0 to 1)
+    const dialValue = document.getElementById("dialValue"); // The text that shows the current setting
+    const dialNote = document.getElementById("dialNote"); // The grey sentence: what gets added
+
+    // The slider has 11 stops (0.0, 0.1 ... 1.0), split into three zones:
+    //   0.0 – 0.3 → Precise  (adds PRECISE_TEXT)
+    //   0.4 – 0.6 → Balanced (adds nothing: the bot's normal behavior)
+    //   0.7 – 1.0 → Creative (adds CREATIVE_TEXT)
+    function creativityZone() { // Which zone the slider is in right now
+      const v = Number(dial.value); // The slider gives text like "0.3", so turn it into a number
+      if (v <= 0.3) return "Precise"; // Left side
+      if (v >= 0.7) return "Creative"; // Right side
+      return "Balanced"; // Middle
+    } // End of creativityZone
+
+    function creativityInstruction() { // The sentence to add to the job card ("" for Balanced)
+      const zone = creativityZone(); // Precise, Balanced or Creative
+      if (zone === "Precise") return PRECISE_TEXT; // Precise sentence
+      if (zone === "Creative") return CREATIVE_TEXT; // Creative sentence
+      return ""; // Balanced: add nothing
+    } // End of creativityInstruction
+
+    function updateDialLabel() { // Show the current setting next to the slider
+      dialValue.textContent = Number(dial.value).toFixed(1) + " · " + creativityZone(); // e.g. "0.7 · Creative"
+      const extra = creativityInstruction(); // What will be added
+      dialNote.textContent = extra === "" // Explain it in words
+        ? "Adds nothing to the job card (the bot's normal style)." // Balanced
+        : "Adds to the job card: \"" + extra + "\""; // Precise or Creative
+    } // End of updateDialLabel
+    dial.addEventListener("input", updateDialLabel); // Update the words WHILE the slider is being dragged
+    updateDialLabel(); // Show the right words when the page opens
 
     // ---------- 5) Save and Reset buttons ----------
     saveBtn.addEventListener("click", function () { // When "Save instructions" is clicked
