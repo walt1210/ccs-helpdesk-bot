@@ -1,0 +1,1032 @@
+<!DOCTYPE html> <!-- Tells the browser this is a modern HTML5 page -->
+<html lang="en"> <!-- Start of the page; the language is English -->
+<head> <!-- The head holds settings, the title and the styles (nothing visible) -->
+  <meta charset="UTF-8"> <!-- Use UTF-8 so all letters and symbols show correctly -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Makes the page fit phone screens -->
+  <title>CCS Help Desk Bot · AUF</title> <!-- Text shown on the browser tab -->
+
+  <style> /* Everything inside <style> controls how the page LOOKS */
+
+    :root { /* :root holds our color "variables" so we can reuse them everywhere */
+      --red: #b31b1b; /* AUF red, used for the header and student bubbles */
+      --red-dark: #8c1414; /* A darker red for hover effects */
+      --gold: #e0a526; /* AUF gold, used for accents and buttons */
+      --gold-light: #fdf3dc; /* A very light gold, used for the bot bubbles */
+      --page: #f6f4f1; /* The soft background color of the whole page */
+      --text: #222222; /* Main text color (almost black) */
+      --muted: #6b6b6b; /* Grey text for small notes */
+    } /* End of the color variables */
+
+    * { box-sizing: border-box; } /* Padding and borders are counted inside each box's width (easier layouts) */
+
+    body { /* Styles for the whole page body */
+      margin: 0; /* Remove the browser's default outer space */
+      font-family: "Segoe UI", Arial, sans-serif; /* Clean, readable font */
+      background: var(--page); /* Use our soft page color */
+      color: var(--text); /* Use our main text color */
+      display: flex; /* Arrange header, panel, chat and input in a column... */
+      flex-direction: column; /* ...from top to bottom */
+      height: 100vh; /* Make the page exactly as tall as the screen */
+    } /* End of body styles */
+
+    header { /* The red top bar */
+      background: var(--red); /* Red background */
+      color: #ffffff; /* White text */
+      padding: 14px 20px; /* Space inside the bar (top/bottom, left/right) */
+      border-bottom: 5px solid var(--gold); /* Gold stripe under the header */
+    } /* End of header styles */
+
+    header h1 { /* The big title inside the header */
+      margin: 0; /* Remove default space around the title */
+      font-size: 1.4rem; /* Title size */
+    } /* End of title styles */
+
+    header p { /* The small line under the title */
+      margin: 4px 0 0; /* A little space above it only */
+      font-size: 0.9rem; /* Smaller text */
+      color: var(--gold); /* Gold text */
+    } /* End of subtitle styles */
+
+    /* ---------- NEW: Bot Instructions panel ---------- */
+    #panel { /* The fold-open box that holds the six instruction boxes */
+      max-width: 800px; /* Same width as the chat area */
+      width: calc(100% - 40px); /* Full width minus a 20px gap on each side */
+      margin: 12px auto 0; /* Space above it; centered on the page */
+      background: #ffffff; /* White card */
+      border: 2px solid var(--gold); /* Gold border */
+      border-radius: 12px; /* Rounded corners */
+      max-height: 55vh; /* Never taller than about half the screen... */
+      overflow-y: auto; /* ...scroll inside it if the boxes don't fit */
+      flex-shrink: 0; /* Don't let the chat squash the panel's title bar */
+    } /* End of panel styles */
+
+    #panel summary { /* The clickable title bar of the panel */
+      padding: 10px 14px; /* Space inside the title bar */
+      font-weight: bold; /* Bold text */
+      color: var(--red); /* Red text */
+      cursor: pointer; /* Hand pointer: it can be clicked to open/close */
+    } /* End of summary styles */
+
+    .fields { /* The grid that holds the six labeled boxes */
+      display: grid; /* Use a grid layout */
+      grid-template-columns: 1fr 1fr; /* Two columns on wide screens */
+      gap: 10px 14px; /* Space between rows and columns */
+      padding: 0 14px 14px; /* Space inside the panel around the grid */
+    } /* End of grid styles */
+
+    @media (max-width: 600px) { /* On phones (narrow screens)... */
+      .fields { grid-template-columns: 1fr; } /* ...use just one column */
+    } /* End of phone rule */
+
+    .field label { /* The name above each box (Role, Task, ...) */
+      display: block; /* Put the label on its own line */
+      font-size: 0.8rem; /* Small text */
+      font-weight: bold; /* Bold */
+      color: var(--red-dark); /* Dark red */
+      margin-bottom: 4px; /* Small gap between label and box */
+      text-transform: uppercase; /* Show it in capital letters */
+      letter-spacing: 0.05em; /* Spread the letters a little */
+    } /* End of label styles */
+
+    .field textarea { /* Each of the six instruction boxes */
+      width: 100%; /* Fill its grid cell */
+      min-height: 64px; /* Tall enough for two or three lines */
+      padding: 8px; /* Space inside the box */
+      font: inherit; /* Use the same font as the page */
+      font-size: 0.9rem; /* Slightly smaller text */
+      border: 1px solid #dddddd; /* Light grey border */
+      border-radius: 8px; /* Rounded corners */
+      resize: vertical; /* The user may drag it taller, but not wider */
+    } /* End of textarea styles */
+
+    .field textarea:focus { /* When a box is clicked into */
+      outline: none; /* Remove the browser's blue outline */
+      border-color: var(--gold); /* Show a gold border instead */
+    } /* End of textarea focus styles */
+
+    .panel-actions { /* The row with the Save and Reset buttons */
+      display: flex; /* Put the items side by side */
+      align-items: center; /* Line them up vertically */
+      gap: 10px; /* Space between them */
+      padding: 0 14px 14px; /* Space inside the panel */
+    } /* End of action-row styles */
+
+    .panel-actions button { /* Shared look for Save and Reset */
+      padding: 8px 16px; /* Space inside the button */
+      font-weight: bold; /* Bold text */
+      border-radius: 8px; /* Rounded corners */
+      cursor: pointer; /* Hand pointer */
+    } /* End of shared button styles */
+
+    #saveBtn { /* The Save instructions button */
+      background: var(--red); /* Red button */
+      color: #ffffff; /* White text */
+      border: none; /* No border */
+    } /* End of Save button styles */
+
+    #saveBtn:hover { background: var(--red-dark); } /* Darker red when the mouse is over it */
+
+    #resetBtn { /* The Reset to default button */
+      background: #ffffff; /* White button */
+      color: var(--red); /* Red text */
+      border: 1px solid var(--red); /* Red outline */
+    } /* End of Reset button styles */
+
+    #saveStatus { /* Small message like "Saved!" next to the buttons */
+      font-size: 0.8rem; /* Small text */
+      color: var(--muted); /* Grey */
+    } /* End of status styles */
+    /* ---------- End of new panel styles ---------- */
+
+    #chat { /* The scrolling area that holds all the message bubbles */
+      flex: 1; /* Take up all the leftover height */
+      overflow-y: auto; /* Show a scrollbar when there are many messages */
+      padding: 20px; /* Space around the messages */
+      display: flex; /* Stack the bubbles... */
+      flex-direction: column; /* ...one under the other */
+      gap: 10px; /* Space between bubbles */
+      max-width: 800px; /* Don't let the chat get too wide on big screens */
+      width: 100%; /* Use full width up to the max */
+      margin: 0 auto; /* Center the chat area on the page */
+    } /* End of chat area styles */
+
+    .bubble { /* Shared look for every message bubble */
+      max-width: 75%; /* A bubble never takes the full width */
+      padding: 10px 14px; /* Space inside the bubble */
+      border-radius: 14px; /* Rounded corners */
+      line-height: 1.45; /* Comfortable spacing between lines */
+      white-space: pre-wrap; /* Keep line breaks that the bot writes */
+      word-wrap: break-word; /* Break very long words so they don't overflow */
+    } /* End of shared bubble styles */
+
+    .user { /* Student bubble */
+      align-self: flex-end; /* Push it to the RIGHT side */
+      background: var(--red); /* Red background */
+      color: #ffffff; /* White text */
+      border-bottom-right-radius: 4px; /* Chat "tail" on the right */
+    } /* End of student bubble styles */
+
+    .bot { /* Bot bubble */
+      align-self: flex-start; /* Push it to the LEFT side */
+      background: var(--gold-light); /* Light gold background */
+      border: 1px solid var(--gold); /* Thin gold border */
+      border-bottom-left-radius: 4px; /* Chat "tail" on the left */
+    } /* End of bot bubble styles */
+
+    .thinking { /* The temporary "Thinking..." bubble */
+      font-style: italic; /* Slanted text */
+      color: var(--muted); /* Grey text */
+    } /* End of thinking styles */
+
+    .error { /* Bubble used when something goes wrong */
+      align-self: center; /* Put it in the middle */
+      background: #fff0f0; /* Very light red background */
+      border: 1px solid var(--red); /* Red border */
+      color: var(--red-dark); /* Dark red text */
+      font-size: 0.9rem; /* Slightly smaller text */
+    } /* End of error styles */
+
+    form { /* The bottom bar with the text box and Send button */
+      display: flex; /* Put the box and button side by side */
+      gap: 10px; /* Space between them */
+      padding: 14px 20px; /* Space inside the bar */
+      background: #ffffff; /* White background */
+      border-top: 3px solid var(--gold); /* Gold line on top */
+    } /* End of form styles */
+
+    #input { /* The text box */
+      flex: 1; /* Stretch to take all the free width */
+      padding: 12px; /* Space inside the box */
+      font-size: 1rem; /* Normal text size */
+      border: 2px solid #dddddd; /* Light grey border */
+      border-radius: 10px; /* Rounded corners */
+    } /* End of text box styles */
+
+    #input:focus { /* When the student clicks into the box */
+      outline: none; /* Remove the browser's default blue outline */
+      border-color: var(--gold); /* Show a gold border instead */
+    } /* End of focus styles */
+
+    #send { /* The Send button */
+      padding: 0 22px; /* Space on the left and right of the word */
+      font-size: 1rem; /* Normal text size */
+      font-weight: bold; /* Bold text */
+      background: var(--gold); /* Gold button */
+      color: #3a2a00; /* Dark brown text for good contrast on gold */
+      border: none; /* No border */
+      border-radius: 10px; /* Rounded corners */
+      cursor: pointer; /* Show the "hand" pointer on hover */
+    } /* End of button styles */
+
+    #send:hover { background: #c98f17; } /* Slightly darker gold when the mouse is over it */
+
+    #send:disabled { /* While we are waiting for the bot */
+      opacity: 0.5; /* Make the button look faded */
+      cursor: not-allowed; /* Show a "no" pointer */
+    } /* End of disabled styles */
+
+    /* ---------- NEW: Token & Cost Meter (running total at the top) ---------- */
+    #meterTop { /* The white bar under the header that shows the running totals */
+      max-width: 800px; /* Same width as the chat */
+      width: calc(100% - 40px); /* Full width minus a 20px gap on each side */
+      margin: 12px auto 0; /* Space above; centered */
+      padding: 8px 14px; /* Space inside */
+      background: #ffffff; /* White card */
+      border: 2px solid var(--gold); /* Gold border */
+      border-radius: 12px; /* Rounded corners */
+      display: flex; /* Items in a row... */
+      flex-wrap: wrap; /* ...that wrap on phones */
+      align-items: center; /* Vertically centered */
+      gap: 4px 18px; /* Space between items */
+      font-size: 0.85rem; /* Slightly small text */
+      flex-shrink: 0; /* Don't let the chat squash it */
+    } /* End of top meter styles */
+
+    #meterTop .title { font-weight: bold; color: var(--red); } /* "Token & Cost Meter" in red */
+    #meterTop b { color: var(--red-dark); } /* The numbers in dark red */
+
+    .price-note { /* The "Example paid prices..." label (used at the top and under each reply) */
+      font-size: 0.72rem; /* Tiny text */
+      color: var(--muted); /* Grey */
+      font-style: italic; /* Slanted, so it reads as a side note */
+    } /* End of price note styles */
+
+    #meterTop .price-note { flex-basis: 100%; } /* At the top, the label gets its own line */
+
+    /* ---------- NEW: the small meter card under each bot reply ---------- */
+    .meter { /* The card that appears right under a bot bubble */
+      align-self: flex-start; /* Left side, like the bot bubble above it */
+      max-width: 75%; /* Same width limit as a bubble */
+      margin-top: -4px; /* Tuck it close to the reply it belongs to */
+      padding: 8px 12px; /* Space inside */
+      background: #ffffff; /* White card */
+      border: 1px dashed var(--gold); /* Dashed gold border: "this is extra info" */
+      border-radius: 10px; /* Rounded corners */
+      font-size: 0.78rem; /* Small text */
+    } /* End of meter card styles */
+
+    .meter table { border-collapse: collapse; } /* Thin, tidy table */
+    .meter th, .meter td { padding: 2px 10px 2px 0; text-align: left; } /* Space between columns */
+    .meter th { color: var(--red-dark); font-weight: bold; } /* Column titles in dark red */
+    .meter td.n { text-align: right; font-family: Consolas, "Courier New", monospace; } /* Numbers lined up on the right */
+    .meter .cost { margin-top: 4px; } /* Small gap above the cost line */
+    .meter .why { color: var(--muted); margin-top: 2px; } /* Grey hint about why the numbers differ */
+
+    /* ---------- NEW: Memory ON/OFF switch bar ---------- */
+    #memoryBar { /* The thin bar that holds the Memory switch, just above the text box */
+      display: flex; /* Put the switch and its note side by side */
+      align-items: center; /* Line them up vertically */
+      gap: 12px; /* Space between the switch and the note */
+      padding: 10px 20px 0; /* Space above and on the sides */
+      background: #ffffff; /* Same white as the form bar below it */
+      border-top: 3px solid var(--gold); /* Gold line on top (the form's line moves here) */
+      flex-wrap: wrap; /* On phones, let the note drop to the next line */
+    } /* End of memory bar styles */
+
+    .switch { /* The clickable label that wraps the hidden checkbox + the drawn switch */
+      display: inline-flex; /* Track and word sit in one row */
+      align-items: center; /* Vertically centered */
+      gap: 8px; /* Space between the track and the word "Memory" */
+      font-weight: bold; /* Bold label */
+      color: var(--red-dark); /* Dark red text */
+      cursor: pointer; /* Hand pointer: it can be clicked */
+      user-select: none; /* Don't highlight the text when clicked quickly */
+    } /* End of switch styles */
+
+    .switch input { /* The real checkbox: hidden, but still works with the keyboard */
+      position: absolute; /* Take it out of the layout... */
+      opacity: 0; /* ...and make it invisible */
+      width: 1px; height: 1px; /* Tiny, but still focusable */
+    } /* End of hidden checkbox styles */
+
+    .track { /* The rounded "pill" of the switch */
+      width: 44px; /* Width of the pill */
+      height: 24px; /* Height of the pill */
+      border-radius: 99px; /* Fully rounded ends */
+      background: #cccccc; /* Grey = OFF */
+      position: relative; /* So the knob can be placed inside it */
+      transition: background 0.2s; /* Smooth color change */
+    } /* End of track styles */
+
+    .track::after { /* The round white knob inside the pill */
+      content: ""; /* Needed for ::after to appear */
+      position: absolute; /* Placed inside the track */
+      top: 3px; left: 3px; /* Starts on the LEFT (OFF position) */
+      width: 18px; height: 18px; /* Size of the knob */
+      border-radius: 50%; /* Perfect circle */
+      background: #ffffff; /* White knob */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3); /* Small shadow so it looks raised */
+      transition: left 0.2s; /* Smooth slide */
+    } /* End of knob styles */
+
+    .switch input:checked + .track { background: var(--gold); } /* Gold pill = ON */
+    .switch input:checked + .track::after { left: 23px; } /* Knob slides to the RIGHT when ON */
+    .switch input:focus-visible + .track { outline: 3px solid var(--red); outline-offset: 2px; } /* Keyboard focus ring */
+
+    #memoryState { /* The ON / OFF word next to the switch */
+      min-width: 2.5em; /* Same width for "ON" and "OFF" so nothing jumps */
+    } /* End of state word styles */
+
+    #memoryNote { /* Small grey sentence explaining what the switch does right now */
+      font-size: 0.8rem; /* Small text */
+      color: var(--muted); /* Grey */
+    } /* End of note styles */
+
+    form { border-top: none; } /* The gold line now sits on the memory bar above the form */
+
+    /* ---------- NEW: Creativity dial ---------- */
+    #dialRow { /* The slider row, under the Memory switch */
+      flex-basis: 100%; /* Take a full line of its own inside the control bar */
+      display: flex; /* Items side by side */
+      flex-wrap: wrap; /* Wrap on phones */
+      align-items: center; /* Vertically centered */
+      gap: 4px 10px; /* Space between items */
+    } /* End of dial row styles */
+
+    .dial-label { font-weight: bold; color: var(--red-dark); } /* "Creativity" in bold dark red */
+    .dial-end { font-size: 0.75rem; color: var(--muted); } /* "Precise 0" and "1 Creative" in small grey */
+
+    #creativity { /* The slider itself */
+      width: 160px; /* A comfortable length to drag */
+      accent-color: var(--gold); /* Gold handle and track fill (modern browsers) */
+      cursor: pointer; /* Hand pointer */
+    } /* End of slider styles */
+
+    #dialValue { /* The current setting, e.g. "0.7 · Creative" */
+      font-weight: bold; /* Bold */
+      color: var(--red); /* Red */
+      min-width: 8.5em; /* Fixed width so the note beside it doesn't jump around */
+    } /* End of value styles */
+
+    #dialNote { font-size: 0.8rem; color: var(--muted); } /* Grey sentence: what gets added to the job card */
+
+    /* ---------- NEW: "What the app sends" panel ---------- */
+    #sendsPanel { /* Fold-open box that shows the JSON sent to /api/chat */
+      max-width: 800px; /* Same width as the chat */
+      width: calc(100% - 40px); /* Full width minus a 20px gap on each side */
+      margin: 0 auto 10px; /* Centered, small gap below */
+      background: #ffffff; /* White card */
+      border: 2px solid var(--gold); /* Gold border */
+      border-radius: 12px; /* Rounded corners */
+      flex-shrink: 0; /* Don't let the chat squash its title bar */
+    } /* End of sends panel styles */
+
+    #sendsPanel summary { /* The clickable title bar */
+      padding: 10px 14px; /* Space inside the title bar */
+      font-weight: bold; /* Bold text */
+      color: var(--red); /* Red text */
+      cursor: pointer; /* Hand pointer */
+    } /* End of summary styles */
+
+    #sendsInfo { /* One line above the JSON: request number, memory mode, message count */
+      padding: 0 14px 6px; /* Space on the sides and below */
+      font-size: 0.8rem; /* Small text */
+      color: var(--muted); /* Grey */
+    } /* End of info line styles */
+
+    #sendsInfo b { color: var(--red-dark); } /* Make "ON"/"OFF" and the count stand out */
+
+    #sendsJson { /* The dark box that shows the exact JSON */
+      margin: 0 14px 14px; /* Space around it inside the card */
+      padding: 12px 14px; /* Space inside the box */
+      background: #1f1c19; /* Dark "code" background */
+      color: #f1ece4; /* Light text */
+      border-radius: 8px; /* Rounded corners */
+      font-family: Consolas, "Courier New", monospace; /* Code font */
+      font-size: 0.8rem; /* Small so long requests still fit */
+      white-space: pre-wrap; /* Keep the JSON's line breaks, wrap long lines */
+      word-break: break-word; /* Break very long words */
+      max-height: 30vh; /* Never taller than about a third of the screen... */
+      overflow-y: auto; /* ...scroll inside it when the conversation is long */
+    } /* End of JSON box styles */
+
+    #sendsJson .k-role { color: #f2b84b; font-weight: bold; } /* "role" values in gold */
+    #sendsJson .k-content { color: #a6d98a; } /* "content" values in green */
+
+    /* ---------- NEW (Step 6): Guard log panel ---------- */
+    #guardPanel { /* Fold-open box that lists everything the guards blocked */
+      max-width: 800px; /* Same width as the chat */
+      width: calc(100% - 40px); /* Full width minus a 20px gap on each side */
+      margin: 0 auto 10px; /* Centered, small gap below */
+      background: #ffffff; /* White card */
+      border: 2px solid var(--gold); /* Gold border */
+      border-radius: 12px; /* Rounded corners */
+      flex-shrink: 0; /* Don't let the chat squash it */
+    } /* End of guard panel styles */
+
+    #guardPanel summary { padding: 10px 14px; font-weight: bold; color: var(--red); cursor: pointer; } /* Clickable title bar */
+
+    #guardList { /* The list of blocked messages */
+      margin: 0; /* No outer space */
+      padding: 0 14px 12px 34px; /* Room for the list numbers */
+      max-height: 22vh; /* Never taller than about a fifth of the screen... */
+      overflow-y: auto; /* ...scroll inside it when the log grows */
+      font-size: 0.85rem; /* Small text */
+    } /* End of guard list styles */
+
+    #guardList li { margin-bottom: 6px; } /* Small gap between entries */
+    #guardList .g-name { font-weight: bold; color: var(--red-dark); } /* Which guard fired, in bold dark red */
+    #guardList .g-time { color: var(--muted); } /* The time, in grey */
+    #guardEmpty { padding: 0 14px 12px; font-size: 0.85rem; color: var(--muted); } /* Nothing blocked yet line */
+
+    /* ---------- NEW (Step 7): Open book switch, Sources line, no-AI meter ---------- */
+    #bookRow { /* The Open book row, under the Creativity dial */
+      flex-basis: 100%; /* A full line of its own inside the control bar */
+      display: flex; /* Items side by side */
+      flex-wrap: wrap; /* Wrap on phones */
+      align-items: center; /* Vertically centered */
+      gap: 4px 12px; /* Space between items */
+    } /* End of book row styles */
+
+    #bookNote { font-size: 0.8rem; color: var(--muted); } /* Grey sentence: what the switch does right now */
+
+    .sources { /* The "Sources" line under a bot reply */
+      align-self: flex-start; /* Sits on the left, under the bot bubble */
+      max-width: 85%; /* Same width limit as bubbles */
+      margin: -4px 0 8px 6px; /* Tuck it close under the bubble */
+      font-size: 0.8rem; /* Small text */
+      color: var(--red-dark); /* Dark red */
+      font-weight: bold; /* Bold so it is noticed */
+    } /* End of sources styles */
+
+    .meter.nocall { border-left: 4px solid var(--gold); font-weight: bold; color: var(--red-dark); } /* "AI not called: 0 tokens" card */
+
+  </style> <!-- End of the styles -->
+</head> <!-- End of the head -->
+
+<body> <!-- Everything inside body is what the student SEES -->
+
+  <header> <!-- The red title bar -->
+    <h1>CCS Help Desk Bot</h1> <!-- App name -->
+    <p>Angeles University Foundation · College of Computer Studies</p> <!-- School name in gold -->
+  </header> <!-- End of the title bar -->
+
+  <!-- NEW: Token & Cost Meter — running totals of the REAL token counts, at the top of the page -->
+  <div id="meterTop"> <!-- White bar under the header -->
+    <span class="title">🔢 Token &amp; Cost Meter</span> <!-- Meter name -->
+    <span>Real tokens so far: <b id="totIn">0</b> in · <b id="totOut">0</b> out · <b id="totAll">0</b> total</span> <!-- Running token totals -->
+    <span>Pretend cost: <b id="totUsd">US$0.000000</b> (<b id="totPhp">₱0.0000</b>)</span> <!-- Running pretend cost -->
+    <span class="price-note">Example paid prices. Our free tier costs us nothing. (US$0.25 per million input tokens · US$1.50 per million output tokens · ₱58 per US$1)</span> <!-- The required label -->
+  </div> <!-- End of the top meter -->
+
+  <!-- NEW: Bot Instructions panel. <details> folds open and closed when its title is clicked -->
+  <details id="panel"> <!-- Starts closed so the chat has room; click the title to open -->
+    <summary>⚙ Bot Instructions</summary> <!-- The clickable title bar -->
+    <div class="fields"> <!-- The grid of six labeled boxes -->
+      <div class="field"><label for="f-role">Role</label><textarea id="f-role" maxlength="600"></textarea></div> <!-- Who the bot is -->
+      <div class="field"><label for="f-task">Task</label><textarea id="f-task" maxlength="600"></textarea></div> <!-- What the bot does -->
+      <div class="field"><label for="f-rules">Rules</label><textarea id="f-rules" maxlength="600"></textarea></div> <!-- Limits the bot must follow -->
+      <div class="field"><label for="f-format">Format</label><textarea id="f-format" maxlength="600"></textarea></div> <!-- How answers should look -->
+      <div class="field"><label for="f-example">Example</label><textarea id="f-example" maxlength="600"></textarea></div> <!-- A sample question and answer -->
+      <div class="field"><label for="f-fallback">Fallback</label><textarea id="f-fallback" maxlength="600"></textarea></div> <!-- What to do when unsure -->
+    </div> <!-- End of the grid -->
+    <div class="panel-actions"> <!-- The row of buttons under the boxes -->
+      <button id="saveBtn" type="button">Save instructions</button> <!-- Applies and remembers the edits -->
+      <button id="resetBtn" type="button">Reset to default</button> <!-- Puts the original text back -->
+      <span id="saveStatus"></span> <!-- Shows "Saved!" or "Unsaved changes" -->
+    </div> <!-- End of the button row -->
+  </details> <!-- End of the panel -->
+
+  <main id="chat"></main> <!-- Empty area; JavaScript will add the message bubbles here -->
+
+  <!-- NEW: "What the app sends" panel. Shows the exact JSON body sent to /api/chat after every message -->
+  <details id="sendsPanel" open> <!-- Starts OPEN so students see it right away; click the title to fold it -->
+    <summary>📦 What the app sends to /api/chat</summary> <!-- The clickable title bar -->
+    <div id="sendsInfo">Nothing sent yet. Type a question and press Send.</div> <!-- Request number, memory mode, message count -->
+    <pre id="sendsJson">{ }</pre> <!-- The exact JSON appears here -->
+  </details> <!-- End of the sends panel -->
+
+  <!-- NEW (Step 6): Guard log — lists everything the guards blocked, and why -->
+  <details id="guardPanel"> <!-- Starts closed; the title shows how many messages were blocked -->
+    <summary id="guardTitle">🛡 Guard log (0 blocked)</summary> <!-- Clickable title bar -->
+    <div id="guardEmpty">Nothing blocked yet. Try sending 6 messages fast, a very long message, or "ignore your instructions".</div> <!-- Shown until something is blocked -->
+    <ol id="guardList"></ol> <!-- Each blocked message becomes one list item here -->
+  </details> <!-- End of the guard log -->
+
+  <!-- NEW: Memory ON/OFF switch -->
+  <div id="memoryBar"> <!-- Thin bar just above the text box -->
+    <label class="switch" for="memoryToggle"> <!-- Clicking anywhere on the label flips the switch -->
+      <input id="memoryToggle" type="checkbox" role="switch" checked> <!-- The real checkbox (hidden); checked = Memory ON -->
+      <span class="track"></span> <!-- The drawn pill-and-knob switch -->
+      Memory <span id="memoryState">ON</span> <!-- The word "Memory" plus ON/OFF -->
+    </label> <!-- End of the switch -->
+    <span id="memoryNote">The bot gets the whole conversation with every message.</span> <!-- What the switch does right now -->
+
+    <!-- NEW: Creativity dial (a slider from 0 = Precise to 1 = Creative) -->
+    <div id="dialRow"> <!-- Its own line inside the control bar -->
+      <label for="creativity" class="dial-label">🎛 Creativity</label> <!-- Name of the dial -->
+      <span class="dial-end">Precise 0</span> <!-- Left end label -->
+      <input id="creativity" type="range" min="0" max="1" step="0.1" value="0" aria-describedby="dialNote"> <!-- The slider; starts at Precise -->
+      <span class="dial-end">1 Creative</span> <!-- Right end label -->
+      <span id="dialValue">0.0 · Precise</span> <!-- Current setting, shown next to the slider -->
+      <span id="dialNote">Adds to the job card: "Give the most standard, predictable answer."</span> <!-- What it adds right now -->
+    </div> <!-- End of the dial row -->
+
+    <!-- NEW (Step 7): Open book switch (FAQ on/off) -->
+    <div id="bookRow"> <!-- Its own line inside the control bar -->
+      <label class="switch" for="bookToggle"> <!-- Clicking the label flips the switch -->
+        <input id="bookToggle" type="checkbox" role="switch"> <!-- Unchecked = Open book OFF (the bot answers from its own head) -->
+        <span class="track"></span> <!-- The drawn pill-and-knob switch -->
+        📖 Open book <span id="bookState">OFF</span> <!-- Name plus ON/OFF -->
+      </label> <!-- End of the switch -->
+      <span id="bookNote">The bot answers from its own knowledge (it may guess).</span> <!-- What the switch does right now -->
+    </div> <!-- End of the book row -->
+  </div> <!-- End of the memory bar -->
+
+  <form id="form"> <!-- The bottom bar; "form" lets the Enter key send too -->
+    <input id="input" type="text" placeholder="Ask about classes, labs, requirements..." autocomplete="off"> <!-- Text box, max 300 characters -->
+    <button id="send" type="submit">Send</button> <!-- The Send button -->
+  </form> <!-- End of the bottom bar -->
+
+
+  <script> // Everything inside <script> is JavaScript that makes the page WORK
+
+    // ---------- 1) Default bot instructions (the six boxes start with these) ----------
+    const DEFAULTS = { // An object: each key is one box, each value is its starting text
+      role: "You are the CCS Help Desk assistant for AUF students.", // Role box
+      task: "Answer questions about classes, labs and school requirements.", // Task box
+      rules: "School topics only. 3 sentences or fewer. Simple English; Taglish is OK.", // Rules box
+      format: "Plain, friendly sentences.", // Format box
+      example: "Q: Where can I print? A: At the CCS help desk.", // Example box
+      fallback: "If you are not sure, say \"I'm not sure. Please ask the CCS office.\" Never guess." // Fallback box (\" = a quote mark inside the text)
+    }; // End of defaults
+
+    const FIELD_NAMES = ["role", "task", "rules", "format", "example", "fallback"]; // The six boxes, in the order they join
+    const STORAGE_KEY = "ccsBotInstructions"; // The name we save under in this browser's storage
+
+    const MAX_CHARS = 300; // The longest message a student may send (same as the server's limit)
+    const MAX_HISTORY = 29; // CHANGED (was 20): most messages sent when Memory is ON.
+                            // The server accepts at most 30. We use an ODD number so the
+                            // trimmed list always starts with a student ("user") message.
+
+    // ---------- 2) Grab the parts of the page we will use ----------
+    const chat = document.getElementById("chat"); // The chat area
+    const form = document.getElementById("form"); // The bottom form
+    const input = document.getElementById("input"); // The text box
+    const sendBtn = document.getElementById("send"); // The Send button
+    const totInBox = document.getElementById("totIn"); // NEW: running total of real input tokens (top meter)
+    const totOutBox = document.getElementById("totOut"); // NEW: running total of real output tokens (top meter)
+    const totAllBox = document.getElementById("totAll"); // NEW: running total of all real tokens (top meter)
+    const totUsdBox = document.getElementById("totUsd"); // NEW: running pretend cost in US dollars
+    const totPhpBox = document.getElementById("totPhp"); // NEW: running pretend cost in pesos
+    const saveBtn = document.getElementById("saveBtn"); // NEW: Save instructions button
+    const resetBtn = document.getElementById("resetBtn"); // NEW: Reset to default button
+    const saveStatus = document.getElementById("saveStatus"); // NEW: the small status message
+    const memoryToggle = document.getElementById("memoryToggle"); // NEW: the Memory ON/OFF checkbox
+    const memoryState = document.getElementById("memoryState"); // NEW: the "ON"/"OFF" word
+    const memoryNote = document.getElementById("memoryNote"); // NEW: the grey explanation next to the switch
+    const sendsInfo = document.getElementById("sendsInfo"); // NEW: the info line in the "What the app sends" panel
+    const sendsJson = document.getElementById("sendsJson"); // NEW: the box that shows the exact JSON
+
+    function box(name) { // Helper: find the textarea for one field name
+      return document.getElementById("f-" + name); // e.g. "role" → the element with id "f-role"
+    } // End of box helper
+
+    // ---------- 3) Load the saved instructions (or the defaults) ----------
+    let instructions = Object.assign({}, DEFAULTS); // Start with a copy of the defaults
+    try { // Browser storage can fail (private mode), so we "try"
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); // Read what was saved before (or null)
+      if (saved) Object.assign(instructions, saved); // If something was saved, use it over the defaults
+    } catch (e) { /* If storage is blocked, just keep the defaults */ } // End of load
+
+    function fillBoxes() { // Put the current instructions into the six boxes
+      FIELD_NAMES.forEach(function (name) { // Go through each field name
+        box(name).value = instructions[name] || ""; // Show its text in its box
+      }); // End of loop
+    } // End of fillBoxes
+    fillBoxes(); // Fill the boxes now, when the page opens
+
+    // ---------- 4) Combine the six boxes into ONE system prompt ----------
+    function buildSystemPrompt() { // Returns the full job card as one piece of text
+      const lines = FIELD_NAMES // Start from the list of field names
+        .filter(function (name) { return instructions[name].trim() !== ""; }) // Skip boxes left empty
+        .map(function (name) { return name.toUpperCase() + ": " + instructions[name].trim(); }); // e.g. "ROLE: You are..."
+      const extra = creativityInstruction(); // NEW: the sentence chosen by the Creativity dial ("" in the middle)
+      if (extra !== "") lines.push("CREATIVITY: " + extra); // NEW: add it as the last line of the job card
+      return lines.join("\n"); // Put each section on its own line
+    } // End of buildSystemPrompt
+
+    // ---------- 4b) NEW: the Creativity dial ----------
+    const PRECISE_TEXT = "Give the most standard, predictable answer."; // Added at the Precise end
+    const CREATIVE_TEXT = "Be imaginative and give a different, surprising answer each time."; // Added at the Creative end
+    const dial = document.getElementById("creativity"); // The slider (0 to 1)
+    const dialValue = document.getElementById("dialValue"); // The text that shows the current setting
+    const dialNote = document.getElementById("dialNote"); // The grey sentence: what gets added
+
+    // The slider has 11 stops (0.0, 0.1 ... 1.0), split into three zones:
+    //   0.0 – 0.3 → Precise  (adds PRECISE_TEXT)
+    //   0.4 – 0.6 → Balanced (adds nothing: the bot's normal behavior)
+    //   0.7 – 1.0 → Creative (adds CREATIVE_TEXT)
+    function creativityZone() { // Which zone the slider is in right now
+      const v = Number(dial.value); // The slider gives text like "0.3", so turn it into a number
+      if (v <= 0.3) return "Precise"; // Left side
+      if (v >= 0.7) return "Creative"; // Right side
+      return "Balanced"; // Middle
+    } // End of creativityZone
+
+    function creativityInstruction() { // The sentence to add to the job card ("" for Balanced)
+      const zone = creativityZone(); // Precise, Balanced or Creative
+      if (zone === "Precise") return PRECISE_TEXT; // Precise sentence
+      if (zone === "Creative") return CREATIVE_TEXT; // Creative sentence
+      return ""; // Balanced: add nothing
+    } // End of creativityInstruction
+
+    function updateDialLabel() { // Show the current setting next to the slider
+      dialValue.textContent = Number(dial.value).toFixed(1) + " · " + creativityZone(); // e.g. "0.7 · Creative"
+      const extra = creativityInstruction(); // What will be added
+      dialNote.textContent = extra === "" // Explain it in words
+        ? "Adds nothing to the job card (the bot's normal style)." // Balanced
+        : "Adds to the job card: \"" + extra + "\""; // Precise or Creative
+    } // End of updateDialLabel
+    dial.addEventListener("input", updateDialLabel); // Update the words WHILE the slider is being dragged
+    updateDialLabel(); // Show the right words when the page opens
+
+    // ---------- 5) Save and Reset buttons ----------
+    saveBtn.addEventListener("click", function () { // When "Save instructions" is clicked
+      FIELD_NAMES.forEach(function (name) { // Go through each box
+        instructions[name] = box(name).value; // Copy its current text into our instructions
+      }); // End of loop
+      try { // Try to remember the edits in this browser
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(instructions)); // Save them as JSON text
+        saveStatus.textContent = "Saved! The bot will use these from the next message."; // Confirm success
+      } catch (e) { // If the browser blocks storage...
+        saveStatus.textContent = "Applied for this visit (this browser can't save them)."; // ...they still work until the page closes
+      } // End of try/catch
+    }); // End of Save handler
+
+    resetBtn.addEventListener("click", function () { // When "Reset to default" is clicked
+      instructions = Object.assign({}, DEFAULTS); // Go back to a copy of the defaults
+      fillBoxes(); // Show the defaults in the boxes
+      try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore storage errors */ } // Forget the saved edits
+      saveStatus.textContent = "Back to the default instructions."; // Confirm the reset
+    }); // End of Reset handler
+
+    FIELD_NAMES.forEach(function (name) { // Watch every box for typing
+      box(name).addEventListener("input", function () { // Whenever the text in a box changes...
+        saveStatus.textContent = "Unsaved changes. Click Save instructions."; // ...remind the user to save
+      }); // End of input handler
+    }); // End of loop
+
+    // ---------- 6) The conversation memory ----------
+    const messages = []; // A list of { role, content } objects; starts empty
+    let totalIn = 0; // Running total of input tokens
+    let totalOut = 0; // Running total of output tokens
+
+    // ---------- 6a) NEW: Token & Cost Meter ----------
+    // EXAMPLE paid prices (pretend only — our free tier costs us nothing)
+    const PRICE_IN_PER_MILLION = 0.25; // US$ for every 1,000,000 input tokens
+    const PRICE_OUT_PER_MILLION = 1.50; // US$ for every 1,000,000 output tokens
+    const PESOS_PER_USD = 58; // Exchange rate: ₱58 for US$1
+    const PRICE_NOTE = "Example paid prices. Our free tier costs us nothing."; // Label shown with every cost
+
+    function estimateTokens(text) { // Our rough rule of thumb: about 4 characters per token
+      return Math.round(text.length / 4); // Characters ÷ 4, rounded to a whole number
+    } // End of estimateTokens
+
+    function costUsd(inTokens, outTokens) { // Pretend cost in US dollars
+      return inTokens / 1000000 * PRICE_IN_PER_MILLION + // input tokens × input price...
+             outTokens / 1000000 * PRICE_OUT_PER_MILLION; // ...plus output tokens × output price
+    } // End of costUsd
+
+    function money(usd) { // Turn a US$ amount into "US$0.000123 (₱0.0071)"
+      return "US$" + usd.toFixed(6) + " (₱" + (usd * PESOS_PER_USD).toFixed(4) + ")"; // Many decimals: the amounts are tiny
+    } // End of money
+
+    function updateTopMeter() { // Refresh the running totals at the top of the page
+      const usd = costUsd(totalIn, totalOut); // Pretend cost of everything so far
+      totInBox.textContent = totalIn.toLocaleString(); // e.g. "1,234"
+      totOutBox.textContent = totalOut.toLocaleString(); // Output tokens so far
+      totAllBox.textContent = (totalIn + totalOut).toLocaleString(); // Input + output
+      totUsdBox.textContent = "US$" + usd.toFixed(6); // Dollars
+      totPhpBox.textContent = "₱" + (usd * PESOS_PER_USD).toFixed(4); // Pesos
+    } // End of updateTopMeter
+
+    // Add the small meter card under a bot reply.
+    // sentText = all the text we sent (job card + every message content), reply = the bot's answer, usage = { input, output } from /api/chat
+    function addMeter(sentText, reply, usage) {
+      const estIn = estimateTokens(sentText); // MY estimate for what we sent
+      const estOut = estimateTokens(reply); // MY estimate for the reply
+      const realIn = (usage && usage.input) || 0; // REAL input tokens reported by Gemini
+      const realOut = (usage && usage.output) || 0; // REAL output tokens (includes hidden "thinking")
+      const div = document.createElement("div"); // A new card
+      div.className = "meter"; // Use the meter card styles
+      div.innerHTML = // Numbers only (no student text), so innerHTML is safe here
+        "<table>" +
+          "<tr><th></th><th>My estimate<br>(characters ÷ 4)</th><th>Real<br>(from usage)</th></tr>" + // Column titles
+          "<tr><td>Sent (input)</td><td class='n'>" + estIn + " <span class='price-note'>(" + sentText.length + " chars)</span></td><td class='n'>" + realIn + "</td></tr>" + // Input row
+          "<tr><td>Reply (output)</td><td class='n'>" + estOut + " <span class='price-note'>(" + reply.length + " chars)</span></td><td class='n'>" + realOut + "</td></tr>" + // Output row
+        "</table>" +
+        "<div class='cost'>Pretend cost of this reply: <b>" + money(costUsd(realIn, realOut)) + "</b></div>" + // Cost from the REAL counts
+        "<div class='price-note'>" + PRICE_NOTE + "</div>" + // Required label
+        "<div class='why'>Real output can be much bigger than the estimate: it also counts the bot's hidden \"thinking\" tokens.</div>"; // Explains the gap
+      chat.appendChild(div); // Put it right under the reply
+      chat.scrollTop = chat.scrollHeight; // Keep the newest item in view
+    } // End of addMeter
+    let requestCount = 0; // NEW: how many requests we have sent (shown in the "What the app sends" panel)
+
+    // ---------- 6b) NEW: the Memory ON/OFF switch ----------
+    // The page ALWAYS keeps the full chat in "messages" (so the bubbles stay on screen).
+    // The switch only decides how much of it we SEND to the server.
+    function updateMemoryLabel() { // Show the current switch position in words
+      if (memoryToggle.checked) { // Switch is ON
+        memoryState.textContent = "ON"; // Show "ON"
+        memoryNote.textContent = "The bot gets the whole conversation with every message."; // Explain ON
+      } else { // Switch is OFF
+        memoryState.textContent = "OFF"; // Show "OFF"
+        memoryNote.textContent = "The bot gets ONLY your newest message. It forgets everything before it."; // Explain OFF
+      } // End of if/else
+    } // End of updateMemoryLabel
+    memoryToggle.addEventListener("change", updateMemoryLabel); // Update the words every time the switch is flipped
+    updateMemoryLabel(); // Show the right words when the page opens
+
+    function messagesToSend() { // Decide which messages go to the server for THIS request
+      if (memoryToggle.checked) { // Memory ON...
+        return messages.slice(-MAX_HISTORY); // ...send the conversation so far (up to the newest 29 messages)
+      } // End of ON branch
+      return messages.slice(-1); // Memory OFF: send only the newest message (the student's question)
+    } // End of messagesToSend
+
+    // ---------- 6c) NEW: show the exact JSON in the "What the app sends" panel ----------
+    function escapeHtml(s) { // Make text safe to put inside HTML (so < and & show as plain text)
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); // Swap the 3 risky characters
+    } // End of escapeHtml
+
+    function showSentJson(jsonText, count) { // jsonText = the exact text we send, count = how many messages
+      requestCount += 1; // One more request sent
+      sendsInfo.innerHTML = "Request #" + requestCount + // e.g. "Request #3"
+        " · Memory <b>" + (memoryToggle.checked ? "ON" : "OFF") + "</b>" + // Which mode was used
+        " · <b>" + count + "</b> message" + (count === 1 ? "" : "s") + " sent"; // How many messages went to the server
+      const pretty = JSON.stringify(JSON.parse(jsonText), null, 2); // Same JSON, just indented with 2 spaces so it's easy to read
+      sendsJson.innerHTML = escapeHtml(pretty) // Make it safe for HTML first...
+        .replace(/("role": )(".*?")/g, '$1<span class="k-role">$2</span>') // ...then color each "role" value gold
+        .replace(/("content": )("(?:\\.|[^"\\])*")/g, '$1<span class="k-content">$2</span>'); // ...and each "content" value green (skips \" inside the text)
+      sendsJson.scrollTop = sendsJson.scrollHeight; // Scroll to the bottom so the newest message is visible
+    } // End of showSentJson
+
+    // ---------- 7) Helper: add a bubble to the chat ----------
+    function addBubble(text, kind) { // "text" = what to show, "kind" = "user", "bot", "thinking" or "error"
+      const div = document.createElement("div"); // Make a new empty <div>
+      div.className = "bubble " + (kind === "thinking" ? "bot thinking" : kind); // Give it the right CSS classes
+      div.textContent = text; // Put the text inside (textContent is safe: it never runs HTML)
+      chat.appendChild(div); // Add the bubble to the bottom of the chat
+      chat.scrollTop = chat.scrollHeight; // Scroll down so the newest bubble is visible
+      return div; // Give the bubble back, so we can remove it later (for "Thinking...")
+    } // End of addBubble
+
+    // ---------- 7b) NEW (Step 6): the three guards (they run BEFORE we call /api/chat) ----------
+    const RATE_MAX = 5; // Guard 1: most messages allowed...
+    const RATE_WINDOW_MS = 60000; // ...in this many milliseconds (60,000 ms = 1 minute)
+    const sendTimes = []; // The times (in ms) of our recent messages that were allowed through
+
+    const INJECTION_PATTERNS = [ // Guard 3: phrases that try to change the bot's rules
+      /(ignore|disregard|forget|override|bypass)\s+(all\s+|any\s+|your\s+|the\s+|my\s+|previous\s+|prior\s+|above\s+|these\s+)*(instructions?|rules?|prompts?|guidelines?|restrictions?)/i, // "ignore your instructions"
+      /(show|reveal|print|display|repeat|tell\s+me|give\s+me|what\s+(is|are))\s+(me\s+)?(your|the)\s+(system\s+prompt|instructions|job\s+card|hidden\s+prompt|initial\s+prompt)/i, // "show your system prompt"
+      /system\s+prompt/i, // any mention of the system prompt
+      /you\s+are\s+now\s+/i, // "you are now DAN"
+      /pretend\s+(to\s+be|you\s+are|you're)/i, // "pretend you are..."
+      /(developer|jailbreak|dan)\s+mode/i, // "developer mode"
+      /new\s+rules?\s*:/i // "new rules: ..."
+    ]; // End of the pattern list (a simple shield: clever wording can still slip past it)
+
+    const guardLogItems = []; // Everything the guards blocked, newest last
+    const guardPanel = document.getElementById("guardPanel"); // The Guard log box
+    const guardTitle = document.getElementById("guardTitle"); // Its title bar (shows the count)
+    const guardList = document.getElementById("guardList"); // The <ol> list
+    const guardEmpty = document.getElementById("guardEmpty"); // The "nothing blocked yet" line
+
+    function logGuard(guardName, reason, text) { // Add one line to the Guard log
+      const li = document.createElement("li"); // A new list item
+      const time = new Date().toLocaleTimeString(); // e.g. "10:42:07 AM"
+      const nameSpan = document.createElement("span"); // The guard's name
+      nameSpan.className = "g-name"; // Style: bold dark red
+      nameSpan.textContent = guardName; // e.g. "Rate limit"
+      const timeSpan = document.createElement("span"); // The time
+      timeSpan.className = "g-time"; // Style: grey
+      timeSpan.textContent = " · " + time; // e.g. " · 10:42:07 AM"
+      const why = document.createElement("div"); // The reason and a short copy of the message
+      const shortText = text.length > 60 ? text.slice(0, 60) + "…" : text; // Keep long messages short in the log
+      why.textContent = reason + " Message: \"" + shortText + "\""; // textContent is safe: it never runs HTML
+      li.appendChild(nameSpan); li.appendChild(timeSpan); li.appendChild(why); // Put the three parts together
+      guardList.appendChild(li); // Add to the list
+      guardLogItems.push(guardName); // Count it
+      guardTitle.textContent = "🛡 Guard log (" + guardLogItems.length + " blocked)"; // Update the title count
+      guardEmpty.style.display = "none"; // Hide the "nothing blocked yet" line
+      guardList.scrollTop = guardList.scrollHeight; // Show the newest entry
+    } // End of logGuard
+
+    function looksLikeInjection(text) { // Guard 3 test: does the message try to change the rules?
+      return INJECTION_PATTERNS.some(function (re) { return re.test(text); }); // true if ANY pattern matches
+    } // End of looksLikeInjection
+
+    function secondsUntilFree() { // Guard 1 test: 0 = allowed now, otherwise how many seconds to wait
+      const now = Date.now(); // The time right now, in ms
+      while (sendTimes.length > 0 && now - sendTimes[0] >= RATE_WINDOW_MS) { sendTimes.shift(); } // Forget messages older than 1 minute
+      if (sendTimes.length < RATE_MAX) return 0; // Fewer than 5 in the last minute: allowed
+      return Math.ceil((sendTimes[0] + RATE_WINDOW_MS - now) / 1000); // Wait until the oldest one is a minute old
+    } // End of secondsUntilFree
+
+    let countdownTimer = null; // The ticking clock for the live countdown (null = not running)
+    let countdownBubble = null; // The one bubble that shows the countdown
+
+    function showCountdown() { // Show "Too many questions! Try again in X seconds" and keep it ticking
+      function words(left) { return "Too many questions! Try again in " + left + " second" + (left === 1 ? "" : "s") + "."; } // Build the message
+      if (countdownTimer === null) { // No countdown running yet: start one
+        countdownBubble = addBubble(words(secondsUntilFree()), "error"); // Show the first message
+        countdownTimer = setInterval(function () { // Every second...
+          const left = secondsUntilFree(); // ...check how long is left
+          if (left <= 0) { // Time is up
+            clearInterval(countdownTimer); countdownTimer = null; // Stop the clock
+            countdownBubble.textContent = "You can ask again now!"; // Tell the student
+          } else { // Still waiting
+            countdownBubble.textContent = words(left); // Update the number
+          } // End of if/else
+        }, 1000); // 1000 ms = 1 second
+      } else { // A countdown is already running: move it to the bottom instead of adding another
+        chat.appendChild(countdownBubble); // Re-attach the same bubble at the end of the chat
+        chat.scrollTop = chat.scrollHeight; // Scroll to it
+      } // End of if/else
+    } // End of showCountdown
+
+    // ---------- 7c) NEW (Step 7): the Open book (FAQ) and a simple keyword search ----------
+    const FAQ = [ // The six sample entries. "keywords" are extra words (English + Taglish) that help the search find the entry
+      { id: "F1", title: "CCS lab hours", text: "CCS lab hours: Monday to Friday 7:00 AM to 7:00 PM; Saturday 8:00 AM to 12:00 NN; closed Sundays and holidays.", keywords: "hours open opening close closing schedule time oras bukas sara laboratory" },
+      { id: "F2", title: "Printing", text: "Printing: at the CCS help desk, 2 pesos per black-and-white page, 10 pesos per colored page.", keywords: "print printer printing photocopy xerox price cost magkano pesos saan" },
+      { id: "F3", title: "Lab reservation", text: "Lab reservation: fill out the form at the CCS office one day before; a faculty member must sign it.", keywords: "reserve reservation book booking lab form sign faculty" },
+      { id: "F4", title: "Wi-Fi", text: "Wi-Fi: choose the student network and log in with your student portal account.", keywords: "wifi wi-fi internet network connect login password portal" },
+      { id: "F5", title: "Capstone proposal defense", text: "Capstone proposal defense: last two weeks of the semester; your adviser announces the date.", keywords: "capstone proposal defense thesis adviser date semester" },
+      { id: "F6", title: "Borrowing a laptop", text: "Borrowing a laptop: up to 3 hours inside the CCS building; leave your student ID at the help desk.", keywords: "borrow borrowing laptop loan hiram computer id" }
+    ]; // End of FAQ
+
+    const STOP_WORDS = ["the","and","for","are","you","your","can","what","when","where","how","who","why","which","this","that","with","from","about","please","have","has","does","did","not","any","out","into","our","its","may","will","would","could","should","there","their","them","then","than","too","was","were","been","being","ano","ang","mga","ako","ko","mo","ba","po","pwede","may","ccs","help","student","students","tell","know","need","want","get","hello","hi"]; // Common words that say nothing about the topic (ignored by the search)
+
+    const bookToggle = document.getElementById("bookToggle"); // The Open book checkbox
+    const bookState = document.getElementById("bookState"); // The "ON"/"OFF" word
+    const bookNote = document.getElementById("bookNote"); // The grey explanation
+    const NO_MATCH_REPLY = "I don't have that information yet. Please ask the CCS office."; // Reply when nothing in the FAQ matches
+
+    function updateBookLabel() { // Show the Open book switch position in words
+      if (bookToggle.checked) { // ON
+        bookState.textContent = "ON"; // Show "ON"
+        bookNote.textContent = "The bot can answer ONLY from matching FAQ entries, and cites them like [F1]."; // Explain ON
+      } else { // OFF
+        bookState.textContent = "OFF"; // Show "OFF"
+        bookNote.textContent = "The bot answers from its own knowledge (it may guess)."; // Explain OFF
+      } // End of if/else
+    } // End of updateBookLabel
+    bookToggle.addEventListener("change", updateBookLabel); // Update the words when the switch is flipped
+    updateBookLabel(); // Show the right words when the page opens
+
+    function wordsOf(text) { // Split text into clean lowercase words, dropping short and common ones
+      return text.toLowerCase() // Lowercase so "Print" matches "print"
+        .replace(/wi-?fi/g, "wifi") // Treat "Wi-Fi" and "wifi" as one word
+        .split(/[^a-z0-9]+/) // Cut at every character that is not a letter or number (so "mag-print" becomes "mag" and "print")
+        .filter(function (w) { return w.length >= 3 && STOP_WORDS.indexOf(w) === -1; }); // Keep words of 3+ letters that are not stop words
+    } // End of wordsOf
+
+    function sameWord(a, b) { // Do two words match? "print" matches "printing", "lab" matches "labs"
+      return a === b || a.startsWith(b) || b.startsWith(a); // Equal, or one starts with the other
+    } // End of sameWord
+
+    function searchFaq(question) { // RETRIEVE: return the FAQ entries that share words with the question
+      const qWords = wordsOf(question); // The question's useful words
+      return FAQ.filter(function (entry) { // Keep an entry if...
+        const eWords = wordsOf(entry.text + " " + entry.keywords); // ...its words (plus keywords)...
+        return qWords.some(function (q) { // ...share at least one word...
+          return eWords.some(function (e) { return sameWord(q, e); }); // ...with the question
+        }); // End of some
+      }); // End of filter
+    } // End of searchFaq
+
+    function openBookInstruction(entries) { // AUGMENT: the text we add to the system prompt
+      return "OPEN BOOK: Answer ONLY from the FAQ entries below. Do not use any other knowledge. " + // The strict rule
+        "Cite the entry id in square brackets, like [F1], after the facts you use. " + // The citation rule
+        "If the entries do not answer the question, say \"" + NO_MATCH_REPLY + "\"\n" + // The fallback
+        "FAQ ENTRIES:\n" + entries.map(function (e) { return e.id + ": " + e.text; }).join("\n"); // Only the matching entries
+    } // End of openBookInstruction
+
+    function addSources(entries, reply) { // Show a "Sources" line under the reply
+      const cited = entries.filter(function (e) { return reply.indexOf("[" + e.id + "]") !== -1; }); // Entries the bot actually cited
+      const shown = cited.length > 0 ? cited : entries; // If it cited none, show the entries it was given
+      const div = document.createElement("div"); // A new line
+      div.className = "sources"; // Use the sources styles
+      div.textContent = "Sources: " + shown.map(function (e) { return "[" + e.id + "] " + e.title; }).join(" · "); // e.g. "Sources: [F1] CCS lab hours"
+      chat.appendChild(div); // Put it right under the reply
+    } // End of addSources
+
+    function addNoCallCard() { // The small card that says the AI was not called
+      const div = document.createElement("div"); // A new card
+      div.className = "meter nocall"; // Meter look, plus the gold "no call" edge
+      div.textContent = "AI not called: 0 tokens"; // The required words
+      chat.appendChild(div); // Put it under the reply
+      chat.scrollTop = chat.scrollHeight; // Keep the newest item in view
+    } // End of addNoCallCard
+
+    // ---------- 8) Welcome message when the page opens ----------
+    addBubble("Hi! I'm the CCS Help Desk Bot. How can I help you today?", "bot"); // First friendly bubble
+
+    // ---------- 9) What happens when the student presses Send ----------
+    form.addEventListener("submit", async function (event) { // Run this function when the form is submitted
+      event.preventDefault(); // Stop the browser from reloading the page (its default behavior)
+
+      const text = input.value.trim(); // Read the text box and remove extra spaces at both ends
+      if (text === "") return; // If the box is empty, do nothing
+      // NEW (Step 6): the three guards. If one blocks the message, we return and /api/chat is NEVER called.
+      if (text.length > MAX_CHARS) { // Guard 2: length limit
+        addBubble("That message is " + text.length + " characters. Please keep it to " + MAX_CHARS + " or fewer.", "error"); // Friendly note
+        logGuard("Length limit", "Blocked: " + text.length + " characters (max " + MAX_CHARS + ").", text); // Write it in the Guard log
+        return; // Stop here (the text stays in the box so the student can shorten it)
+      } // End of Guard 2
+
+      if (looksLikeInjection(text)) { // Guard 3: injection shield
+        addBubble(text, "user"); // Show what the student typed
+        addBubble("Nice try! I only follow my help desk rules.", "bot"); // The required reply
+        logGuard("Injection shield", "Blocked: tried to change the bot's rules.", text); // Write it in the Guard log
+        input.value = ""; // Clear the text box
+        return; // Stop here: the server is not called and this message is not saved in memory
+      } // End of Guard 3
+
+      if (secondsUntilFree() > 0) { // Guard 1: rate limit (5 messages per minute)
+        showCountdown(); // Show "Too many questions! Try again in X seconds" with a live countdown
+        logGuard("Rate limit", "Blocked: more than " + RATE_MAX + " messages in one minute.", text); // Write it in the Guard log
+        return; // Stop here (the text stays in the box so the student can send it after the wait)
+      } // End of Guard 1
+      sendTimes.push(Date.now()); // The message passed every guard: remember the time for the rate limit
+
+      addBubble(text, "user"); // Show the student's message on the right
+      messages.push({ role: "user", content: text }); // Save it in the conversation memory
+      input.value = ""; // Clear the text box
+
+      // NEW (Step 7): Open book. RETRIEVE matching FAQ entries BEFORE calling the server.
+      let matched = []; // The FAQ entries that match this question (empty when Open book is OFF)
+      if (bookToggle.checked) { // Only search when the Open book switch is ON
+        matched = searchFaq(text); // Simple keyword search
+        if (matched.length === 0) { // Nothing matches: do NOT call the server
+          addBubble(NO_MATCH_REPLY, "bot"); // The honest fallback
+          messages.push({ role: "assistant", content: NO_MATCH_REPLY }); // Keep the chat in memory
+          addNoCallCard(); // Show "AI not called: 0 tokens"
+          sendsInfo.textContent = "Open book ON: no FAQ entry matched, so nothing was sent to /api/chat (0 tokens)."; // Tell the "What the app sends" panel
+          return; // Stop here (the buttons were never locked yet)
+        } // End of no-match
+      } // End of Open book search
+
+      sendBtn.disabled = true; // Disable Send so the student can't double-send
+      input.disabled = true; // Lock the text box while waiting
+
+      const thinking = addBubble("Thinking...", "thinking"); // Show the temporary "Thinking..." bubble
+
+      // NEW: build the request body ONCE, so the panel shows exactly what we send
+      const toSend = messagesToSend(); // Whole conversation (Memory ON) or just the newest message (Memory OFF)
+      let systemText = buildSystemPrompt(); // The six saved boxes combined into one job card
+      if (matched.length > 0) systemText += "\n" + openBookInstruction(matched); // NEW (Step 7): AUGMENT the job card with ONLY the matching FAQ entries
+      const bodyText = JSON.stringify({ // Turn our object into JSON text
+        system: systemText, // The job card
+        messages: toSend // CHANGED: chosen by the Memory switch
+      }); // End of the JSON body
+      // NEW: all the TEXT the AI will read = job card + every message we send (used for "my estimate")
+      const sentText = systemText + toSend.map(function (m) { return m.content; }).join(""); // Glue it all into one string
+      showSentJson(bodyText, toSend.length); // NEW: show it in the "What the app sends" panel
+
+      try { // "try" = attempt the risky part (the network call); errors jump to "catch"
+        const response = await fetch("/api/chat", { // Send a request to OUR server function (never to Google directly)
+          method: "POST", // POST = we are sending data
+          headers: { "Content-Type": "application/json" }, // Tell the server we are sending JSON
+          body: bodyText // CHANGED: the very same JSON text the panel is showing
+        }); // End of fetch
+
+        const data = await response.json().catch(function () { return {}; }); // Read the server's JSON (empty object if it's not JSON)
+        thinking.remove(); // Remove the "Thinking..." bubble
+
+        if (!response.ok) { // If the server said something went wrong (status 400, 429, 500...)
+          const msg = response.status === 429 ? "The AI is busy. Please wait a minute." : (data.error || "Something went wrong. Please try again."); // NEW: error 429 gets its own friendly text
+          addBubble(response.status === 429 ? msg : "Oops! " + msg, "error"); // Show a friendly error bubble
+          messages.pop(); // Remove the unanswered question from memory so the chat stays tidy
+          return; // Stop here (the "finally" part below still runs)
+        } // End of error check
+
+        const reply = data.reply || "Sorry, I didn't get an answer. Please try again."; // The bot's answer (or a fallback)
+        addBubble(reply, "bot"); // Show the answer on the left
+        messages.push({ role: "assistant", content: reply }); // Save the answer in memory
+        if (matched.length > 0) addSources(matched, reply); // NEW (Step 7): "Sources" line under the reply
+
+        addMeter(sentText, reply, data.usage); // NEW: estimate vs real tokens + pretend cost, under the reply
+
+        if (data.usage) { // If the server sent token counts...
+          totalIn += data.usage.input || 0; // ...add the input tokens to the total
+          totalOut += data.usage.output || 0; // ...add the output tokens to the total
+          updateTopMeter(); // CHANGED: refresh the running totals at the top of the page
+        } // End of usage update
+
+      } catch (err) { // This runs if the request could not be sent at all (no internet, server down...)
+        thinking.remove(); // Remove the "Thinking..." bubble
+        addBubble("Oops! I couldn't reach the server. Check your internet and try again.", "error"); // Friendly error
+        messages.pop(); // Remove the unanswered question from memory
+      } finally { // "finally" always runs, success or failure
+        sendBtn.disabled = false; // Turn the Send button back on
+        input.disabled = false; // Unlock the text box
+        input.focus(); // Put the cursor back in the text box, ready for the next question
+      } // End of try/catch/finally
+    }); // End of the submit handler
+
+  </script> <!-- End of the JavaScript -->
+</body> <!-- End of the visible page -->
+</html> <!-- End of the HTML document -->
